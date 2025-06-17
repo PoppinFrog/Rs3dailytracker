@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RuneScape Daily Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #f0f0f0;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+    h2 {
+      text-align: center;
+    }
+    .task {
+      margin-bottom: 10px;
+    }
+    .reset-button {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    #timer {
+      text-align: center;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h2>RuneScape Daily Tracker</h2>
+  <div id="tasks"></div>
+  <button class="reset-button" onclick="manualReset()">Manuell Reset</button>
+  <div id="timer">Laddar timer...</div>
+
+  <script>
+    const TASKS = [
+      "Broad arrowtips",
+      "Mine Priff and Oologo flasks",
+      "Daily challenges",
+      "Vis wax",
+      "Daily herb run",
+      "Buy bloodweed seed",
+      "Daily free supply from Um",
+      "PoP buy daily supplies",
+      "Daily boat",
+      "Fremennik yak fur",
+      "Yanille daily runes",
+      "2x Mark of the trades"
+    ];
+
+    const STORAGE_KEY = 'rs_dailies';
+    const RESET_INTERVAL = 24 * 60 * 60 * 1000; // 24 timmar
+
+    function loadStatus() {
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+        checked: [],
+        lastReset: Date.now()
+      };
+
+      if (Date.now() - data.lastReset > RESET_INTERVAL) {
+        data.checked = [];
+        data.lastReset = Date.now();
+      }
+
+      return data;
+    }
+
+    function saveStatus(status) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(status));
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('tasks');
+      container.innerHTML = '';
+
+      TASKS.forEach((task, index) => {
+        const div = document.createElement('div');
+        div.className = 'task';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `task-${index}`;
+        checkbox.checked = status.checked.includes(index);
+        checkbox.addEventListener('change', () => toggleTask(index));
+
+        const label = document.createElement('label');
+        label.htmlFor = `task-${index}`;
+        label.textContent = task;
+
+        div.appendChild(checkbox);
+        div.appendChild(label);
+        container.appendChild(div);
+      });
+    }
+
+    function toggleTask(index) {
+      if (status.checked.includes(index)) {
+        status.checked = status.checked.filter(i => i !== index);
+      } else {
+        status.checked.push(index);
+      }
+      saveStatus(status);
+    }
+
+    function manualReset() {
+      if (confirm("Vill du verkligen återställa listan?")) {
+        status.checked = [];
+        status.lastReset = Date.now();
+        saveStatus(status);
+        renderTasks();
+      }
+    }
+
+    function updateTimer() {
+      const timerDiv = document.getElementById('timer');
+      const nextReset = new Date(status.lastReset + RESET_INTERVAL);
+      const now = new Date();
+      const diff = nextReset - now;
+
+      if (diff <= 0) {
+        status.checked = [];
+        status.lastReset = Date.now();
+        saveStatus(status);
+        renderTasks();
+      }
+
+      const hours = Math.floor(diff / 3600000);
+      const minutes = Math.floor((diff % 3600000) / 60000);
+      const seconds = Math.floor((diff % 60000) / 1000);
+      timerDiv.textContent = `Återställs om: ${hours}h ${minutes}m ${seconds}s`;
+
+      setTimeout(updateTimer, 1000);
+    }
+
+    let status = loadStatus();
+    renderTasks();
+    updateTimer();
+  </script>
+</body>
+</html>
