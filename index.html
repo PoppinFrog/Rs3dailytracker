@@ -76,20 +76,15 @@
     const STORAGE_KEY = 'rs_dailies';
     const WEEKLY_STORAGE_KEY = 'rs_weeklies';
 
-    function getNextResetTime() {
+    function getNextDailyResetTime() {
       const now = new Date();
-      const reset = new Date();
-      reset.setUTCHours(0, 0, 0, 0);
-      if (now > reset) {
-        reset.setUTCDate(reset.getUTCDate() + 1);
-      }
+      const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
       return reset.getTime();
     }
 
-    function getNextWednesdayReset() {
+    function getNextWeeklyResetTime() {
       const now = new Date();
-      const reset = new Date();
-      reset.setUTCHours(0, 0, 0, 0);
+      const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
       const day = reset.getUTCDay();
       const daysUntilWednesday = (3 - day + 7) % 7 || 7;
       reset.setUTCDate(reset.getUTCDate() + daysUntilWednesday);
@@ -102,7 +97,8 @@
         lastReset: 0
       };
 
-      if (Date.now() > resetTimeFunc()) {
+      const nextResetTime = resetTimeFunc();
+      if (data.lastReset < nextResetTime - 86400000) {
         data.checked = [];
         data.lastReset = Date.now();
       }
@@ -174,7 +170,7 @@
       }
     }
 
-    function updateTimer(elementId, resetTimeFunc, status, tasks, toggleFunc, containerId) {
+    function updateTimer(elementId, resetTimeFunc, status, tasks, toggleFunc, containerId, storageKey) {
       const timerDiv = document.getElementById(elementId);
       const nextReset = new Date(resetTimeFunc());
       const now = new Date();
@@ -183,7 +179,7 @@
       if (diff <= 0) {
         status.checked = [];
         status.lastReset = Date.now();
-        saveStatus(containerId === 'tasks' ? STORAGE_KEY : WEEKLY_STORAGE_KEY, status);
+        saveStatus(storageKey, status);
         renderTasks(containerId, tasks, status, toggleFunc);
       }
 
@@ -192,17 +188,17 @@
       const seconds = Math.floor((diff % 60000) / 1000);
       timerDiv.textContent = `Återställs om: ${hours}h ${minutes}m ${seconds}s`;
 
-      setTimeout(() => updateTimer(elementId, resetTimeFunc, status, tasks, toggleFunc, containerId), 1000);
+      setTimeout(() => updateTimer(elementId, resetTimeFunc, status, tasks, toggleFunc, containerId, storageKey), 1000);
     }
 
-    const dailyStatus = loadStatus(STORAGE_KEY, getNextResetTime);
-    const weeklyStatus = loadStatus(WEEKLY_STORAGE_KEY, getNextWednesdayReset);
+    const dailyStatus = loadStatus(STORAGE_KEY, getNextDailyResetTime);
+    const weeklyStatus = loadStatus(WEEKLY_STORAGE_KEY, getNextWeeklyResetTime);
 
     renderTasks('tasks', DAILY_TASKS, dailyStatus, toggleDaily);
     renderTasks('weeklies', WEEKLY_TASKS, weeklyStatus, toggleWeekly);
 
-    updateTimer('timer', getNextResetTime, dailyStatus, DAILY_TASKS, toggleDaily, 'tasks');
-    updateTimer('weekly-timer', getNextWednesdayReset, weeklyStatus, WEEKLY_TASKS, toggleWeekly, 'weeklies');
+    updateTimer('timer', getNextDailyResetTime, dailyStatus, DAILY_TASKS, toggleDaily, 'tasks', STORAGE_KEY);
+    updateTimer('weekly-timer', getNextWeeklyResetTime, weeklyStatus, WEEKLY_TASKS, toggleWeekly, 'weeklies', WEEKLY_STORAGE_KEY);
   </script>
 </body>
 </html>
